@@ -20,7 +20,7 @@ func TestLoadRates(t *testing.T) {
 	file.Close()
 
 	// Test the loadRates function
-	rates, err := loadRates(file.Name())
+	rates, err := LoadRates(file.Name())
 	if err != nil {
 		t.Fatalf("loadRates returned an error: %v", err)
 	}

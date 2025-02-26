@@ -5,7 +5,7 @@ import (
 	"os"
 )
 
-func loadRates(filename string) (map[string]float64, error) {
+func LoadRates(filename string) (map[string]float64, error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		return nil, err
