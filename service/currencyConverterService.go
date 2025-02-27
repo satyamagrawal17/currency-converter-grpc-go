@@ -1,53 +1,35 @@
-package main
+package service
 
 import (
 	"context"
 	"currency_converter1/pb"
 	"currency_converter1/utils"
+	"database/sql"
 	"fmt"
-	"google.golang.org/grpc"
-	"log"
-	"net"
 )
 
-type server struct {
+type CurrencyConverterService struct {
 	pb.UnimplementedCurrencyConversionServer
-	rates map[string]float64
+	DB    *sql.DB
+	Utils utils.IConversion
 }
 
-func (s *server) ConvertCurrency(ctx context.Context, req *pb.CurrencyConversionRequest) (*pb.CurrencyConversionResponse, error) {
-	// Implement your conversion logic here
-	fromCurrentRate, exists := s.rates[req.FromCurrency]
-	if !exists {
-		return nil, fmt.Errorf("conversion rate not found for %s", req.FromCurrency)
+func (s *CurrencyConverterService) ConvertCurrency(ctx context.Context, req *pb.CurrencyConversionRequest) (*pb.CurrencyConversionResponse, error) {
+	if req.FromCurrency == "" {
+		return nil, fmt.Errorf("from currency cannot be empty")
 	}
-	toCurrentRate, exists := s.rates[req.ToCurrency]
-	if !exists {
-		return nil, fmt.Errorf("conversion rate not found for %s", req.ToCurrency)
+	if req.Money.Currency == "" {
+		return nil, fmt.Errorf("to currency cannot be empty")
 	}
-	rate := toCurrentRate / fromCurrentRate
-	convertedAmount := req.Amount * rate
+	rate, err := s.Utils.GetConversionRate(s.DB, req.FromCurrency, req.Money.Currency)
+	if err != nil {
+		return nil, fmt.Errorf("could not get conversion rate: %v", err)
+	}
+
+	convertedAmount := req.Money.Amount * rate
 	money := &pb.Money{
-		Currency: req.ToCurrency,
+		Currency: req.Money.Currency,
 		Amount:   convertedAmount,
 	}
 	return &pb.CurrencyConversionResponse{Money: money}, nil
-}
-
-func main() {
-	rates, err := utils.LoadRates("config/currencies.json")
-	if err != nil {
-		log.Fatalf("failed to load rates: %v", err)
-	}
-
-	lis, err := net.Listen("tcp", ":50051")
-	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
-	}
-	s := grpc.NewServer()
-	pb.RegisterCurrencyConversionServer(s, &server{rates: rates})
-	log.Printf("server listening at %v", lis.Addr())
-	if err := s.Serve(lis); err != nil {
-		log.Fatalf("failed to serve: %v", err)
-	}
 }

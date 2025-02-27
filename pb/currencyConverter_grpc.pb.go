@@ -19,7 +19,7 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	CurrencyConversion_ConvertCurrency_FullMethodName = "/currency.CurrencyConversion/ConvertCurrency"
+	CurrencyConversion_ConvertCurrency_FullMethodName = "/pb.CurrencyConversion/ConvertCurrency"
 )
 
 // CurrencyConversionClient is the client API for CurrencyConversion service.
@@ -108,7 +108,7 @@ func _CurrencyConversion_ConvertCurrency_Handler(srv interface{}, ctx context.Co
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var CurrencyConversion_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "currency.CurrencyConversion",
+	ServiceName: "pb.CurrencyConversion",
 	HandlerType: (*CurrencyConversionServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{

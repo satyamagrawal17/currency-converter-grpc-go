@@ -1,20 +1,49 @@
-package main
+package service
 
 import (
 	"context"
 	"currency_converter1/pb"
+	"database/sql"
+	"fmt"
 	"math"
 	"testing"
+
+	"github.com/DATA-DOG/go-sqlmock"
 )
 
+type MockUtils struct {
+	GetConversionRateFunc func(db *sql.DB, fromCurrency, toCurrency string) (float64, error)
+}
+
+func (m *MockUtils) GetConversionRate(db *sql.DB, fromCurrency, toCurrency string) (float64, error) {
+	return m.GetConversionRateFunc(db, fromCurrency, toCurrency)
+}
+
 func TestConvertCurrency_EdgeCases(t *testing.T) {
-	s := &server{
-		rates: map[string]float64{
-			"USD": 1.0,
-			"EUR": 0.85,
-			"JPY": 110.0,
+	// Mock database connection
+	db, _, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("failed to open sqlmock database: %v", err)
+	}
+	defer db.Close()
+
+	// Mock GetConversionRate function
+	mockUtils := &MockUtils{
+		GetConversionRateFunc: func(db *sql.DB, fromCurrency, toCurrency string) (float64, error) {
+			rates := map[string]float64{
+				"USD": 1.0,
+				"EUR": 0.85,
+				"JPY": 110.0,
+			}
+			rate, ok := rates[toCurrency]
+			if !ok {
+				return 0, fmt.Errorf("conversion rate not found for %s to %s", fromCurrency, toCurrency)
+			}
+			return rate, nil
 		},
 	}
+
+	s := &CurrencyConverterService{DB: db, Utils: mockUtils}
 
 	tests := []struct {
 		name           string
@@ -38,9 +67,11 @@ func TestConvertCurrency_EdgeCases(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req := &pb.CurrencyConversionRequest{
+				Money: &pb.Money{
+					Currency: tt.toCurrency,
+					Amount:   tt.amount,
+				},
 				FromCurrency: tt.fromCurrency,
-				ToCurrency:   tt.toCurrency,
-				Amount:       tt.amount,
 			}
 
 			resp, err := s.ConvertCurrency(context.Background(), req)

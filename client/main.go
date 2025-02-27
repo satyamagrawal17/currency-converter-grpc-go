@@ -25,10 +25,17 @@ func main() {
 	defer conn.Close()
 	c := pb.NewCurrencyConversionClient(conn)
 
-	r, err := c.ConvertCurrency(ctx, &pb.CurrencyConversionRequest{FromCurrency: "USD", ToCurrency: "EUR", Amount: 100})
+	req := &pb.CurrencyConversionRequest{
+		Money: &pb.Money{
+			Currency: "USD",
+			Amount:   100,
+		},
+		FromCurrency: "EUR",
+	}
+
+	r, err := c.ConvertCurrency(ctx, req)
 	if err != nil {
 		log.Fatalf("could not convert currency: %v", err)
 	}
-	log.Printf("Converted Amount: %f", r.Money.Amount)
-	log.Printf("Converted Amount: %f", r.Money.Currency)
+	log.Printf("Converted Amount: %f %s", r.Money.Amount, r.Money.Currency)
 }
