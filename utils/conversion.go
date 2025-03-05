@@ -11,13 +11,13 @@ func NewConversionUtils() *ConversionUtils {
 	return &ConversionUtils{}
 }
 
-func (u *ConversionUtils) GetConversionRate(db *sql.DB, fromCurrency, toCurrency string) (float64, error) {
+func (u *ConversionUtils) GetConversionRate(db *sql.DB, currency string) (float64, error) {
 	var rate float64
-	query := "SELECT rate FROM conversions WHERE from_currency = $1 AND to_currency = $2"
-	err := db.QueryRow(query, fromCurrency, toCurrency).Scan(&rate)
+	query := "SELECT rate FROM conversions WHERE currency = $1"
+	err := db.QueryRow(query, currency).Scan(&rate)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return 0, fmt.Errorf("conversion rate not found for %s to %s", fromCurrency, toCurrency)
+			return 0, fmt.Errorf("conversion rate not found for %s", currency)
 		}
 		return 0, fmt.Errorf("error querying conversion rate: %v", err)
 	}

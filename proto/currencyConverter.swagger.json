@@ -1,0 +1,113 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "proto/currencyConverter.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "CurrencyConversion"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/v1/convert": {
+      "post": {
+        "operationId": "CurrencyConversion_ConvertCurrency",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/pbCurrencyConversionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/pbCurrencyConversionRequest"
+            }
+          }
+        ],
+        "tags": [
+          "CurrencyConversion"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "pbCurrencyConversionRequest": {
+      "type": "object",
+      "properties": {
+        "money": {
+          "$ref": "#/definitions/pbMoney"
+        },
+        "fromCurrency": {
+          "type": "string"
+        }
+      }
+    },
+    "pbCurrencyConversionResponse": {
+      "type": "object",
+      "properties": {
+        "money": {
+          "$ref": "#/definitions/pbMoney"
+        }
+      }
+    },
+    "pbMoney": {
+      "type": "object",
+      "properties": {
+        "currency": {
+          "type": "string"
+        },
+        "amount": {
+          "type": "number",
+          "format": "double"
+        }
+      }
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    }
+  }
+}

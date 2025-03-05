@@ -21,12 +21,17 @@ func (s *CurrencyConverterService) ConvertCurrency(ctx context.Context, req *pb.
 	if req.Money.Currency == "" {
 		return nil, fmt.Errorf("to currency cannot be empty")
 	}
-	rate, err := s.Utils.GetConversionRate(s.DB, req.FromCurrency, req.Money.Currency)
+	toRate, err := s.Utils.GetConversionRate(s.DB, req.Money.Currency)
 	if err != nil {
 		return nil, fmt.Errorf("could not get conversion rate: %v", err)
 	}
 
-	convertedAmount := req.Money.Amount * rate
+	fromRate, err := s.Utils.GetConversionRate(s.DB, req.FromCurrency)
+	if err != nil {
+		return nil, fmt.Errorf("could not get conversion rate: %v", err)
+	}
+
+	convertedAmount := (req.Money.Amount * toRate) / fromRate
 	money := &pb.Money{
 		Currency: req.Money.Currency,
 		Amount:   convertedAmount,

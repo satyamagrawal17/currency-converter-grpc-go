@@ -4,9 +4,15 @@ package pb;
 
 option go_package = "/pb";
 
+import "google/api/annotations.proto"; // Import the annotations
+
 service CurrencyConversion {
-  rpc ConvertCurrency (CurrencyConversionRequest) returns (CurrencyConversionResponse);
-}
+  rpc ConvertCurrency (CurrencyConversionRequest) returns (CurrencyConversionResponse) {
+    option (google.api.http) = {
+      post: "/v1/convert" // Define the HTTP POST endpoint
+      body: "*"          // Use the entire request body as the gRPC request
+    };
+  }}
 
 message CurrencyConversionRequest {
   Money money = 1;
