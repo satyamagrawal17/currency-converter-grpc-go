@@ -12,6 +12,12 @@ type CurrencyConverterService struct {
 	DB repository.ICurrencyRepository
 }
 
+func NewCurrencyConverterService(currencyRepo repository.ICurrencyRepository) (*CurrencyConverterService, error) {
+	return &CurrencyConverterService{
+		DB: currencyRepo,
+	}, nil
+}
+
 func (s *CurrencyConverterService) ConvertCurrency(ctx context.Context, req *pb.CurrencyConversionRequest) (*pb.CurrencyConversionResponse, error) {
 	if req.FromCurrency == "" {
 		return nil, fmt.Errorf("from currency cannot be empty")

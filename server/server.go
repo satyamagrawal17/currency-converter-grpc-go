@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"currency_converter1/consumer"
+	"currency_converter1/database"
 	"currency_converter1/pb"
 	"currency_converter1/repository"
 	"currency_converter1/service"
@@ -18,13 +19,18 @@ import (
 )
 
 func main() {
-	db, err := repository.NewClient()
+	dbInstance, err := database.InitDynamoDB()
+	if err != nil {
+		log.Fatalf("failed to connect to database: %v", err)
+	}
+	dbRepo, err := repository.NewCurrencyRepository(dbInstance)
 	if err != nil {
 		log.Fatalf("failed to connect to database: %v", err)
 	}
 
-	converterService := &service.CurrencyConverterService{
-		DB: db,
+	converterService, err := service.NewCurrencyConverterService(dbRepo)
+	if err != nil {
+		log.Fatalf("failed to connect to service: %v", err)
 	}
 
 	lis, err := net.Listen("tcp", ":50051")
@@ -33,11 +39,6 @@ func main() {
 	}
 	s := grpc.NewServer()
 	pb.RegisterCurrencyConversionServer(s, converterService)
-
-	//currencyDB, err := database.NewDatabase()
-	//if err != nil {
-	//	log.Fatalf("failed to create CurrencyDB: %v\n", err)
-	//}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	sigchan := make(chan os.Signal, 1)
@@ -49,7 +50,7 @@ func main() {
 		cancel()
 	}()
 
-	go consumer.ConsumeMessages(ctx, db)
+	go consumer.ConsumeMessages(ctx, dbRepo)
 
 	go func() {
 		mux := runtime.NewServeMux()

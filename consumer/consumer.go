@@ -10,7 +10,7 @@ import (
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
 )
 
-func ConsumeMessages(ctx context.Context, currencyDB *repository.CurrencyRepository) {
+func ConsumeMessages(ctx context.Context, currencyDB repository.ICurrencyRepository) {
 	cfg, err := configure.LoadConfig()
 	if err != nil {
 		log.Printf("failed to fetch environment variables: %v\n", err)
