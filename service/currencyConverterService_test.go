@@ -3,48 +3,21 @@ package service
 import (
 	"context"
 	"currency_converter1/pb"
-	"database/sql"
+	"currency_converter1/repository"
 	"fmt"
+	"github.com/golang/mock/gomock"
 	"math"
 	"testing"
-
-	"github.com/DATA-DOG/go-sqlmock"
 )
 
-type MockUtils struct {
-	GetConversionRateFunc func(db *sql.DB, fromCurrency, toCurrency string) (float64, error)
-}
-
-func (m *MockUtils) GetConversionRate(db *sql.DB, fromCurrency, toCurrency string) (float64, error) {
-	return m.GetConversionRateFunc(db, fromCurrency, toCurrency)
+func setupMockController(t *testing.T) (*gomock.Controller, *repository.MockDynamoDBRepository, *CurrencyConverterService) {
+	ctrl := gomock.NewController(t)
+	mockRepo := repository.NewMockDynamoDBRepository(ctrl)
+	s := &CurrencyConverterService{DB: mockRepo}
+	return ctrl, mockRepo, s
 }
 
 func TestConvertCurrency_EdgeCases(t *testing.T) {
-	// Mock database connection
-	db, _, err := sqlmock.New()
-	if err != nil {
-		t.Fatalf("failed to open sqlmock database: %v", err)
-	}
-	defer db.Close()
-
-	// Mock GetConversionRate function
-	mockUtils := &MockUtils{
-		GetConversionRateFunc: func(db *sql.DB, fromCurrency, toCurrency string) (float64, error) {
-			rates := map[string]float64{
-				"USD": 1.0,
-				"EUR": 0.85,
-				"JPY": 110.0,
-			}
-			rate, ok := rates[toCurrency]
-			if !ok {
-				return 0, fmt.Errorf("conversion rate not found for %s to %s", fromCurrency, toCurrency)
-			}
-			return rate, nil
-		},
-	}
-
-	s := &CurrencyConverterService{DB: db, Utils: mockUtils}
-
 	tests := []struct {
 		name           string
 		fromCurrency   string
@@ -52,20 +25,96 @@ func TestConvertCurrency_EdgeCases(t *testing.T) {
 		amount         float64
 		expectedAmount float64
 		expectError    bool
+		mockSetup      func(mockRepo *repository.MockDynamoDBRepository)
 	}{
-		{"Same currency conversion", "USD", "USD", 100, 100, false},
-		{"Very large amount", "USD", "EUR", 1e9, 8.5e8, false},
-		{"Very small amount", "USD", "EUR", 1e-9, 8.5e-10, false},
-		{"Non-existent currency", "USD", "ABC", 100, 0, true},
-		{"Empty from currency", "", "USD", 100, 0, true},
-		{"Empty to currency", "USD", "", 100, 0, true},
-		{"Zero rate", "USD", "JPY", 0, 0, false},
+		{
+			name:           "Same currency conversion",
+			fromCurrency:   "USD",
+			toCurrency:     "USD",
+			amount:         100,
+			expectedAmount: 100,
+			expectError:    false,
+			mockSetup: func(mockRepo *repository.MockDynamoDBRepository) {
+				mockRepo.EXPECT().GetItem("USD").Return(1.0, nil).Times(2)
+			},
+		},
+		{
+			name:           "Very large amount",
+			fromCurrency:   "USD",
+			toCurrency:     "EUR",
+			amount:         1e9,
+			expectedAmount: 9.2e8,
+			expectError:    false,
+			mockSetup: func(mockRepo *repository.MockDynamoDBRepository) {
+				mockRepo.EXPECT().GetItem("USD").Return(1.0, nil)
+				mockRepo.EXPECT().GetItem("EUR").Return(0.92, nil)
+			},
+		},
+		{
+			name:           "Very small amount",
+			fromCurrency:   "USD",
+			toCurrency:     "EUR",
+			amount:         1e-9,
+			expectedAmount: 9.2e-10,
+			expectError:    false,
+			mockSetup: func(mockRepo *repository.MockDynamoDBRepository) {
+				mockRepo.EXPECT().GetItem("USD").Return(1.0, nil)
+				mockRepo.EXPECT().GetItem("EUR").Return(0.92, nil)
+			},
+		},
+		{
+			name:           "Non-existent currency",
+			fromCurrency:   "USD",
+			toCurrency:     "ABC",
+			amount:         100,
+			expectedAmount: 0,
+			expectError:    true,
+			mockSetup: func(mockRepo *repository.MockDynamoDBRepository) {
+				mockRepo.EXPECT().GetItem("USD").Return(1.0, nil)
+				mockRepo.EXPECT().GetItem("ABC").Return(0.0, fmt.Errorf("currency ABC not found"))
+			},
+		},
+		{
+			name:           "Empty from currency",
+			fromCurrency:   "",
+			toCurrency:     "USD",
+			amount:         100,
+			expectedAmount: 0,
+			expectError:    true,
+			mockSetup:      func(mockRepo *repository.MockDynamoDBRepository) {},
+		},
+		{
+			name:           "Empty to currency",
+			fromCurrency:   "USD",
+			toCurrency:     "",
+			amount:         100,
+			expectedAmount: 0,
+			expectError:    true,
+			mockSetup:      func(mockRepo *repository.MockDynamoDBRepository) {},
+		},
+		{
+			name:           "Zero rate",
+			fromCurrency:   "USD",
+			toCurrency:     "JPY",
+			amount:         0,
+			expectedAmount: 0,
+			expectError:    false,
+			mockSetup: func(mockRepo *repository.MockDynamoDBRepository) {
+				mockRepo.EXPECT().GetItem("USD").Return(1.0, nil)
+				mockRepo.EXPECT().GetItem("JPY").Return(0.0, nil)
+			},
+		},
 	}
 
 	const tolerance = 1e-12
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			ctrl, mockRepo, s := setupMockController(t)
+			defer ctrl.Finish()
+
+			tt.mockSetup(mockRepo)
+
 			req := &pb.CurrencyConversionRequest{
 				Money: &pb.Money{
 					Currency: tt.toCurrency,

@@ -1,4 +1,4 @@
-package config
+package configure
 
 import (
 	"fmt"
@@ -15,14 +15,18 @@ type KafkaMessage struct {
 }
 
 type Config struct {
-	DBUser       string
-	DBPassword   string
-	DBName       string
-	DBHost       string
-	DBPort       string
-	KafkaBroker  string
-	KafkaTopic   string
-	KafkaGroupId string
+	DBUser          string
+	DBPassword      string
+	DBName          string
+	DBHost          string
+	DBPort          string
+	KafkaBroker     string
+	KafkaTopic      string
+	KafkaGroupId    string
+	DynamoEndpoint  string
+	DynamoRegion    string
+	DynamoAccessKey string
+	DynamoSecretKey string
 }
 
 func LoadConfig() (*Config, error) {
@@ -31,17 +35,21 @@ func LoadConfig() (*Config, error) {
 	}
 
 	cfg := &Config{
-		DBUser:       os.Getenv("DB_USER"),
-		DBPassword:   os.Getenv("DB_PASSWORD"),
-		DBName:       os.Getenv("DB_NAME"),
-		DBHost:       os.Getenv("DB_HOST"),
-		DBPort:       os.Getenv("DB_PORT"),
-		KafkaBroker:  os.Getenv("KAFKA_BROKER"),
-		KafkaTopic:   os.Getenv("KAFKA_TOPIC"),
-		KafkaGroupId: os.Getenv("GROUP_ID"),
+		DBUser:          os.Getenv("DB_USER"),
+		DBPassword:      os.Getenv("DB_PASSWORD"),
+		DBName:          os.Getenv("DB_NAME"),
+		DBHost:          os.Getenv("DB_HOST"),
+		DBPort:          os.Getenv("DB_PORT"),
+		KafkaBroker:     os.Getenv("KAFKA_BROKER"),
+		KafkaTopic:      os.Getenv("KAFKA_TOPIC"),
+		KafkaGroupId:    os.Getenv("GROUP_ID"),
+		DynamoEndpoint:  os.Getenv("DYNAMO_ENDPOINT"),
+		DynamoRegion:    os.Getenv("DYNAMO_REGION"),
+		DynamoAccessKey: os.Getenv("DYNAMO_ACCESS_KEY"),
+		DynamoSecretKey: os.Getenv("DYNAMO_SECRET_KEY"),
 	}
 
-	if cfg.DBUser == "" || cfg.DBPassword == "" || cfg.DBName == "" || cfg.DBHost == "" || cfg.DBPort == "" || cfg.KafkaBroker == "" || cfg.KafkaTopic == "" || cfg.KafkaGroupId == "" {
+	if cfg.DBUser == "" || cfg.DBPassword == "" || cfg.DBName == "" || cfg.DBHost == "" || cfg.DBPort == "" || cfg.KafkaBroker == "" || cfg.KafkaTopic == "" || cfg.KafkaGroupId == "" || cfg.DynamoEndpoint == "" || cfg.DynamoRegion == "" || cfg.DynamoAccessKey == "" || cfg.DynamoSecretKey == "" {
 		return nil, fmt.Errorf("one or more environment variables are not set")
 	}
 

@@ -2,16 +2,16 @@ package consumer
 
 import (
 	"context"
-	"currency_converter1/config"
-	"currency_converter1/database"
+	configure "currency_converter1/config"
+	"currency_converter1/repository"
 	"encoding/json"
 	"log"
 
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
 )
 
-func ConsumeMessages(ctx context.Context, currencyDB *database.CurrencyDB) {
-	cfg, err := config.LoadConfig()
+func ConsumeMessages(ctx context.Context, currencyDB *repository.CurrencyRepository) {
+	cfg, err := configure.LoadConfig()
 	if err != nil {
 		log.Printf("failed to fetch environment variables: %v\n", err)
 		return // Return early if config loading fails
@@ -54,14 +54,14 @@ func ConsumeMessages(ctx context.Context, currencyDB *database.CurrencyDB) {
 
 		log.Printf("Received message: key = %s, value = %s, partition = %d, offset = %d\n", string(msg.Key), string(msg.Value), msg.TopicPartition.Partition, msg.TopicPartition.Offset)
 
-		var kafkaMsg config.KafkaMessage
+		var kafkaMsg configure.KafkaMessage
 		err = json.Unmarshal(msg.Value, &kafkaMsg)
 		if err != nil {
 			log.Printf("Error unmarshalling JSON: %v\n", err)
 			continue
 		}
 
-		err = currencyDB.UpdateDB(kafkaMsg.Rates)
+		err = currencyDB.UpdateItems(kafkaMsg.Rates)
 		if err != nil {
 			log.Printf("Error updating database: %v\n", err)
 			continue
