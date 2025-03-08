@@ -1,51 +1,39 @@
 package service
 
 import (
-	"context"
-	"currency_converter1/pb"
+	"currency_converter1/dto"
 	"currency_converter1/repository"
 	"fmt"
 )
 
 type CurrencyConverterService struct {
-	pb.UnimplementedCurrencyConversionServer
-	DB repository.ICurrencyRepository
+	repository repository.ICurrencyRepository
 }
 
-func NewCurrencyConverterService(currencyRepo repository.ICurrencyRepository) (*CurrencyConverterService, error) {
+func NewCurrencyConverterService(currencyRepo repository.ICurrencyRepository) *CurrencyConverterService {
 	return &CurrencyConverterService{
-		DB: currencyRepo,
-	}, nil
+		repository: currencyRepo,
+	}
 }
 
-func (s *CurrencyConverterService) ConvertCurrency(ctx context.Context, req *pb.CurrencyConversionRequest) (*pb.CurrencyConversionResponse, error) {
-	if req.FromCurrency == "" {
-		return nil, fmt.Errorf("from currency cannot be empty")
-	}
-	if req.Money.Currency == "" {
-		return nil, fmt.Errorf("to currency cannot be empty")
-	}
+func (s *CurrencyConverterService) ConvertCurrency(req dto.ConvertCurrencyRequest) (float64, error) {
 
 	fromRate, err := s.getConversionRate(req.FromCurrency)
 	if err != nil {
-		return nil, fmt.Errorf("could not get conversion rate for %s: %v", req.FromCurrency, err)
+		return 0, fmt.Errorf("could not get conversion rate for %s: %v", req.FromCurrency, err)
 	}
 
 	toRate, err := s.getConversionRate(req.Money.Currency)
 	if err != nil {
-		return nil, fmt.Errorf("could not get conversion rate for %s: %v", req.Money.Currency, err)
+		return 0, fmt.Errorf("could not get conversion rate for %s: %v", req.Money.Currency, err)
 	}
 
 	convertedAmount := (req.Money.Amount * toRate) / fromRate
-	money := &pb.Money{
-		Currency: req.Money.Currency,
-		Amount:   convertedAmount,
-	}
-	return &pb.CurrencyConversionResponse{Money: money}, nil
+	return convertedAmount, nil
 }
 
 func (s *CurrencyConverterService) getConversionRate(currency string) (float64, error) {
-	rate, err := s.DB.GetItem(currency)
+	rate, err := s.repository.GetItem(currency)
 	if err != nil {
 		return 0, fmt.Errorf("failed to get conversion rate for currency %s: %w", currency, err)
 	}

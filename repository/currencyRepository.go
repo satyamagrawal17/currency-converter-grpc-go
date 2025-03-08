@@ -16,11 +16,11 @@ type CurrencyRepository struct {
 	tableName string
 }
 
-func NewCurrencyRepository(dy *database.DynamoDB) (ICurrencyRepository, error) {
+func NewCurrencyRepository(dy *database.DynamoDB) ICurrencyRepository {
 	return &CurrencyRepository{
 		db:        dy.DB,
 		tableName: dy.TableName,
-	}, nil
+	}
 }
 
 func (dbRepo *CurrencyRepository) UpdateItems(newRates map[string]float64) error {

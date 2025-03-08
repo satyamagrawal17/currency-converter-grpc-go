@@ -1,8 +1,8 @@
 package service
 
 import (
-	"context"
-	"currency_converter1/pb"
+	"currency_converter1/dto"
+	"currency_converter1/models"
 	"currency_converter1/repository"
 	"fmt"
 	"github.com/golang/mock/gomock"
@@ -13,7 +13,7 @@ import (
 func setupMockController(t *testing.T) (*gomock.Controller, *repository.MockDynamoDBRepository, *CurrencyConverterService) {
 	ctrl := gomock.NewController(t)
 	mockRepo := repository.NewMockDynamoDBRepository(ctrl)
-	s := &CurrencyConverterService{DB: mockRepo}
+	s := &CurrencyConverterService{repository: mockRepo}
 	return ctrl, mockRepo, s
 }
 
@@ -75,24 +75,6 @@ func TestConvertCurrency_EdgeCases(t *testing.T) {
 			},
 		},
 		{
-			name:           "Empty from currency",
-			fromCurrency:   "",
-			toCurrency:     "USD",
-			amount:         100,
-			expectedAmount: 0,
-			expectError:    true,
-			mockSetup:      func(mockRepo *repository.MockDynamoDBRepository) {},
-		},
-		{
-			name:           "Empty to currency",
-			fromCurrency:   "USD",
-			toCurrency:     "",
-			amount:         100,
-			expectedAmount: 0,
-			expectError:    true,
-			mockSetup:      func(mockRepo *repository.MockDynamoDBRepository) {},
-		},
-		{
 			name:           "Zero rate",
 			fromCurrency:   "USD",
 			toCurrency:     "JPY",
@@ -114,26 +96,22 @@ func TestConvertCurrency_EdgeCases(t *testing.T) {
 			defer ctrl.Finish()
 
 			tt.mockSetup(mockRepo)
-
-			req := &pb.CurrencyConversionRequest{
-				Money: &pb.Money{
-					Currency: tt.toCurrency,
+			req := dto.ConvertCurrencyRequest{
+				Money: models.Money{
 					Amount:   tt.amount,
+					Currency: tt.toCurrency,
 				},
 				FromCurrency: tt.fromCurrency,
 			}
 
-			resp, err := s.ConvertCurrency(context.Background(), req)
+			resp, err := s.ConvertCurrency(req)
 			if (err != nil) != tt.expectError {
 				t.Fatalf("expected error: %v, got: %v", tt.expectError, err)
 			}
 
 			if !tt.expectError {
-				if resp.Money.Currency != tt.toCurrency {
-					t.Errorf("expected currency %s, got %s", tt.toCurrency, resp.Money.Currency)
-				}
-				if math.Abs(resp.Money.Amount-tt.expectedAmount) > tolerance {
-					t.Errorf("expected amount %f, got %f", tt.expectedAmount, resp.Money.Amount)
+				if math.Abs(resp-tt.expectedAmount) > tolerance {
+					t.Errorf("expected amount %f, got %f", tt.expectedAmount, resp)
 				}
 			}
 		})
